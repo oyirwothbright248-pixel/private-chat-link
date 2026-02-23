@@ -7,8 +7,13 @@ const { v4: uuidv4 } = require('uuid');
 app.use(express.static('public'));
 
 // 1. Route to create a new private room link
+// Function to generate a short 6-character ID
+function generateShortId() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
 app.get('/create', (req, res) => {
-    const roomId = uuidv4(); 
+    const roomId = generateShortId(); // Now results in something like 'KJ82S1'
     res.redirect(`/room/${roomId}`);
 });
 
