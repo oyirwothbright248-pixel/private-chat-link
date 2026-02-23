@@ -194,6 +194,18 @@
 
     socket.emit('join-room', roomId);
 
+    // --- 1. SUPABASE HISTORY LOAD ---
+    socket.on('load-history', (history) => {
+        // Clear container before loading to avoid duplicates
+        chatContainer.innerHTML = ''; 
+        history.forEach(msg => {
+            // Note: Since socket IDs change every refresh, 
+            // the 'me' vs 'them' logic for history works best if we had accounts.
+            // For now, it will render them as 'them' to show they are saved.
+            renderMessage(msg.message, msg.sender_id === socket.id ? 'me' : 'them');
+        });
+    });
+
     // --- CHAT & ENTER KEY ---
     msgInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); send(); } });
 
@@ -226,7 +238,6 @@
     let localStream, peerConnection;
     const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
-    // This triggers the "Ring" on the other end
     function initiateCall(video) {
         socket.emit('call-request', { roomId, video });
         startCall(video);
@@ -254,7 +265,6 @@
         socket.emit('signal', { roomId, data: { offer } });
     }
 
-    // Listen for incoming call request
     socket.on('incoming-call', (data) => {
         const type = data.video ? "Video" : "Voice";
         if (confirm(`Incoming ${type} call. Answer?`)) {
@@ -282,7 +292,6 @@
         document.getElementById('video-grid').classList.remove('active');
         document.getElementById('hangupBtn').style.display = 'none';
         peerConnection = null;
-        // Optional: socket.emit('hangup', roomId);
     }
 </script>
 </body>
