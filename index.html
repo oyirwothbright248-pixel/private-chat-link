@@ -27,12 +27,11 @@
             margin: 0; 
             display: flex; 
             flex-direction: column; 
-            height: 100vh; /* Critical for mobile height */
+            height: 100vh;
             height: -webkit-fill-available;
             overflow: hidden;
         }
 
-        /* --- STICKY TECH HEADER --- */
         header {
             padding: 12px 20px;
             background: rgba(15, 23, 42, 0.9);
@@ -57,7 +56,6 @@
             cursor: pointer;
         }
 
-        /* --- RESPONSIVE VIDEO GRID --- */
         #video-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -73,7 +71,6 @@
 
         video { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; background: #1e293b; border: 1px solid #334155; }
 
-        /* --- CHAT AREA --- */
         #chat-container {
             flex: 1;
             overflow-y: auto;
@@ -99,7 +96,6 @@
         .me { align-self: flex-end; background: var(--bubble-me); color: white; border-bottom-right-radius: 4px; }
         .them { align-self: flex-start; background: var(--bubble-them); border-bottom-left-radius: 4px; }
 
-        /* --- MOBILE RESPONSIVE ACTION BAR --- */
         .action-bar {
             background: var(--panel);
             padding: 10px 20px;
@@ -124,12 +120,10 @@
             transition: 0.2s;
         }
 
-        .icon-btn:active { transform: scale(0.9); background: var(--accent); }
         .btn-call { color: #22c55e; border-color: #22c55e; }
         .btn-video { color: var(--accent); border-color: var(--accent); }
         .btn-hangup { color: var(--danger); border-color: var(--danger); display: none; }
 
-        /* --- INPUT AREA --- */
         .input-area {
             padding: 12px 15px;
             background: var(--panel);
@@ -137,7 +131,7 @@
             gap: 8px;
             align-items: center;
             flex-shrink: 0;
-            padding-bottom: env(safe-area-inset-bottom); /* iOS support */
+            padding-bottom: env(safe-area-inset-bottom);
         }
 
         input {
@@ -147,7 +141,7 @@
             padding: 14px 18px;
             border-radius: 30px;
             color: white;
-            font-size: 16px; /* Prevents auto-zoom on iPhone */
+            font-size: 16px;
             outline: none;
         }
 
@@ -162,10 +156,8 @@
             cursor: pointer;
         }
 
-        /* Responsive Fixes */
         @media (max-width: 600px) {
             #video-grid.active { grid-template-columns: 1fr; max-height: 45vh; }
-            .logo-tech { font-size: 1rem; }
         }
     </style>
 </head>
@@ -182,9 +174,9 @@
 </div>
 
 <div class="action-bar">
-    <button class="icon-btn btn-call" onclick="startCall(false)" title="Voice Call">📞</button>
-    <button class="icon-btn btn-video" onclick="startCall(true)" title="Video Call">📹</button>
-    <button id="hangupBtn" class="icon-btn btn-hangup" onclick="location.reload()" title="End Call">🚫</button>
+    <button class="icon-btn btn-call" onclick="initiateCall(false)">📞</button>
+    <button class="icon-btn btn-video" onclick="initiateCall(true)">📹</button>
+    <button id="hangupBtn" class="icon-btn btn-hangup" onclick="endCall()">🚫</button>
 </div>
 
 <div id="chat-container"></div>
@@ -202,28 +194,18 @@
 
     socket.emit('join-room', roomId);
 
-    // --- 1. ENTER KEY LOGIC ---
-    msgInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault(); // Prevents new line
-            send();
-        }
-    });
+    // --- CHAT & ENTER KEY ---
+    msgInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); send(); } });
 
-    // --- 2. CHAT LOGIC ---
     function send() {
         const text = msgInput.value.trim();
         if (!text) return;
-        
-        const data = { roomId, msg: text, sender: socket.id };
-        socket.emit('chat-msg', data);
+        socket.emit('chat-msg', { roomId, msg: text, sender: socket.id });
         renderMessage(text, 'me');
         msgInput.value = '';
     }
 
-    socket.on('render-msg', (data) => {
-        if (data.sender !== socket.id) renderMessage(data.msg, 'them');
-    });
+    socket.on('render-msg', (data) => { if (data.sender !== socket.id) renderMessage(data.msg, 'them'); });
 
     function renderMessage(text, type) {
         const div = document.createElement('div');
@@ -233,7 +215,6 @@
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
-    // --- 3. COPY LINK ---
     function copyLink() {
         navigator.clipboard.writeText(window.location.href);
         const btn = document.querySelector('.copy-btn');
@@ -241,12 +222,17 @@
         setTimeout(() => btn.textContent = "🔗 COPY LINK", 2000);
     }
 
-    // --- 4. VOICE & VIDEO CALL LOGIC ---
+    // --- CALLING LOGIC ---
     let localStream, peerConnection;
     const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
+    // This triggers the "Ring" on the other end
+    function initiateCall(video) {
+        socket.emit('call-request', { roomId, video });
+        startCall(video);
+    }
+
     async function startCall(videoEnabled) {
-        // Show video grid only if video is enabled
         if(videoEnabled) document.getElementById('video-grid').classList.add('active');
         document.getElementById('hangupBtn').style.display = 'flex';
 
@@ -258,7 +244,6 @@
 
         peerConnection.ontrack = event => {
             document.getElementById('remoteVideo').srcObject = event.streams[0];
-            // If the person calling has video, show the grid for the receiver too
             if(event.track.kind === 'video') document.getElementById('video-grid').classList.add('active');
         };
 
@@ -269,9 +254,16 @@
         socket.emit('signal', { roomId, data: { offer } });
     }
 
+    // Listen for incoming call request
+    socket.on('incoming-call', (data) => {
+        const type = data.video ? "Video" : "Voice";
+        if (confirm(`Incoming ${type} call. Answer?`)) {
+            startCall(data.video);
+        }
+    });
+
     socket.on('signal', async (data) => {
-        if (!peerConnection) await startCall(true); // Auto-answer with video for simplicity
-        
+        if (!peerConnection) return; 
         if (data.offer) {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
             const answer = await peerConnection.createAnswer();
@@ -283,6 +275,15 @@
             await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
         }
     });
+
+    function endCall() {
+        if (localStream) localStream.getTracks().forEach(track => track.stop());
+        if (peerConnection) peerConnection.close();
+        document.getElementById('video-grid').classList.remove('active');
+        document.getElementById('hangupBtn').style.display = 'none';
+        peerConnection = null;
+        // Optional: socket.emit('hangup', roomId);
+    }
 </script>
 </body>
 </html>

@@ -2,18 +2,17 @@ const express = require('express');
 const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
-const { v4: uuidv4 } = require('uuid');
 
 app.use(express.static('public'));
 
-// 1. Route to create a new private room link
 // Function to generate a short 6-character ID
 function generateShortId() {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
+// 1. Route to create a new private room link
 app.get('/create', (req, res) => {
-    const roomId = generateShortId(); // Now results in something like 'KJ82S1'
+    const roomId = generateShortId(); 
     res.redirect(`/room/${roomId}`);
 });
 
@@ -23,24 +22,36 @@ app.get('/room/:id', (req, res) => {
 });
 
 io.on('connection', (socket) => {
+    
+    // Handle user joining a room
     socket.on('join-room', (roomId) => {
         socket.join(roomId);
-        console.log(`User joined: ${roomId}`);
+        console.log(`User ${socket.id} joined room: ${roomId}`);
     });
 
+    // Handle text messages
     socket.on('chat-msg', (data) => {
-        // We send the message AND the sender's ID back to the room
         io.to(data.roomId).emit('render-msg', {
             msg: data.msg,
             sender: socket.id
         });
-
-        socket.on('signal', (payload) => {
-    // This broadcasts the video signal to the other person in the room
-    socket.to(payload.roomId).emit('signal', payload.data);
-});
     });
-}); // This was the missing bracket!
+
+    // Handle "Ringing" notification for Voice/Video
+    socket.on('call-request', (payload) => {
+        // Sends to everyone in the room EXCEPT the person calling
+        socket.to(payload.roomId).emit('incoming-call', payload);
+    });
+
+    // Handle WebRTC signaling (Video/Voice data)
+    socket.on('signal', (payload) => {
+        socket.to(payload.roomId).emit('signal', payload.data);
+    });
+
+    socket.on('disconnect', () => {
+        console.log('User disconnected');
+    });
+});
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
