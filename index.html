@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Private Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+        #chat { height: 300px; overflow-y: scroll; border: 1px solid #ccc; background: white; padding: 10px; margin-bottom: 10px; }
+        input { width: 70%; padding: 10px; }
+        button { padding: 10px; background: #007bff; color: white; border: none; }
+    </style>
+</head>
+<body>
+    <h3>Private Room</h3>
+    <div id="chat"></div>
+    <input id="msg" placeholder="Type a message..." />
+    <button onclick="send()">Send</button>
+
+    <script>
+        const socket = io();
+        const roomId = window.location.pathname.split('/').pop();
+
+        socket.emit('join-room', roomId);
+
+        function send() {
+            const msg = document.getElementById('msg').value;
+            socket.emit('chat-msg', { roomId, msg });
+            document.getElementById('msg').value = '';
+        }
+
+        socket.on('render-msg', (msg) => {
+            const div = document.createElement('div');
+            div.textContent = msg;
+            document.getElementById('chat').appendChild(div);
+        });
+    </script>
+</body>
+</html>
