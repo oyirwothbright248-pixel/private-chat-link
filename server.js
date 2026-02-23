@@ -29,6 +29,11 @@ io.on('connection', (socket) => {
             msg: data.msg,
             sender: socket.id
         });
+
+        socket.on('signal', (payload) => {
+    // This broadcasts the video signal to the other person in the room
+    socket.to(payload.roomId).emit('signal', payload.data);
+});
     });
 }); // This was the missing bracket!
 
