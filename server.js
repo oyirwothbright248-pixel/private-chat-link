@@ -8,7 +8,7 @@ app.use(express.static('public'));
 
 // 1. Route to create a new private room link
 app.get('/create', (req, res) => {
-    const roomId = uuidv4(); // Generates a unique ID
+    const roomId = uuidv4(); 
     res.redirect(`/room/${roomId}`);
 });
 
@@ -24,10 +24,13 @@ io.on('connection', (socket) => {
     });
 
     socket.on('chat-msg', (data) => {
-        // Broadcasts ONLY to people in the same room
-        io.to(data.roomId).emit('render-msg', data.msg);
+        // We send the message AND the sender's ID back to the room
+        io.to(data.roomId).emit('render-msg', {
+            msg: data.msg,
+            sender: socket.id
+        });
     });
-});
+}); // This was the missing bracket!
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
