@@ -24,7 +24,6 @@
         .auth-btn { width: 100%; padding: 14px; border-radius: 10px; font-weight: 800; cursor: pointer; transition: 0.2s; border: none; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .btn-primary { background: var(--accent); color: white; }
         .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
-        .auth-link { color: var(--neon); font-size: 12px; cursor: pointer; text-decoration: underline; margin-top: 10px; display: inline-block; opacity: 0.7; }
 
         /* Spinner Style */
         .spinner { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; display: none; }
@@ -71,7 +70,7 @@
 <body>
 
 <div id="auth-screen">
-    <div class="auth-card" id="auth-card-main">
+    <div class="auth-card">
         <h2 style="color:var(--neon); margin-bottom: 5px;">BRIGHT TECH</h2>
         <p style="margin-bottom: 20px; opacity: 0.8;">Secure Communication Portal</p>
         
@@ -86,22 +85,6 @@
                 <span class="btn-text">CREATE ACCOUNT</span>
                 <div class="spinner"></div>
             </button>
-            <span class="auth-link" onclick="forgotPassword()">Forgot Password?</span>
-        </div>
-
-        <div id="token-fields" style="display:none">
-            <p style="font-size: 13px; color: var(--neon);">Enter the 8-digit code sent to your email</p>
-            <input type="text" id="auth-token" placeholder="Enter Token" maxlength="8" 
-                   style="text-align: center; letter-spacing: 2px; font-weight: 800; font-size: 18px;">
-            <button id="verify-btn" class="auth-btn btn-primary" onclick="verifyToken()">
-                <span class="btn-text">VERIFY & ENTER</span>
-                <div class="spinner"></div>
-            </button>
-            <div style="margin-top: 15px;">
-                <span id="resend-link" class="auth-link" onclick="resendToken()">Resend Code</span>
-                <span id="resend-timer" style="font-size: 11px; opacity: 0.5; display: none; color: var(--text);">Wait 60s to resend</span>
-            </div>
-            <span class="auth-link" onclick="location.reload()" style="display:block; margin-top:20px; opacity:0.5; text-decoration: none;">← Back to Login</span>
         </div>
     </div>
 </div>
@@ -156,8 +139,6 @@
     let myId = null;
     let targetId = window.location.pathname.split('/').pop();
     if(targetId === '' || targetId === 'room') targetId = null;
-
-    let resendTimer = 0;
     let notifications = {};
     let localStream, peerConnection;
 
@@ -175,19 +156,10 @@
 
         toggleLoading('login-btn', true);
         const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        toggleLoading('login-btn', false);
         
-        if (error) {
-            alert("Login Error: " + error.message);
-            toggleLoading('login-btn', false);
-        } else {
-            const { error: otpError } = await supabaseClient.auth.signInWithOtp({ email });
-            toggleLoading('login-btn', false);
-            if (otpError) alert("Security Gate Error: " + otpError.message);
-            else {
-                showTokenView();
-                startResendTimer();
-            }
-        }
+        if (error) alert("Login Error: " + error.message);
+        else location.reload();
     }
 
     async function handleSignUp() {
@@ -200,70 +172,7 @@
         toggleLoading('signup-btn', false);
         
         if (error) alert("Signup Error: " + error.message);
-        else {
-            alert("Verification code sent! Check your email.");
-            showTokenView();
-            startResendTimer();
-        }
-    }
-
-    async function verifyToken() {
-        const email = document.getElementById('auth-email').value;
-        const token = document.getElementById('auth-token').value.trim();
-        if (!token) return alert("Please enter the token.");
-
-        toggleLoading('verify-btn', true);
-        const { error } = await supabaseClient.auth.verifyOtp({ email, token, type: 'signup' });
-
-        if (error) {
-            const { error: error2 } = await supabaseClient.auth.verifyOtp({ email, token, type: 'signin' });
-            if(error2) {
-                alert("Invalid Token: " + error2.message);
-                toggleLoading('verify-btn', false);
-            } else location.reload();
-        } else location.reload();
-    }
-
-    async function resendToken() {
-        if (resendTimer > 0) return; 
-        const email = document.getElementById('auth-email').value;
-        const { error } = await supabaseClient.auth.signInWithOtp({ email });
-        if (error) alert("Action blocked: " + error.message);
-        else {
-            alert("A fresh token has been dispatched.");
-            startResendTimer();
-        }
-    }
-
-    function startResendTimer() {
-        resendTimer = 60;
-        const link = document.getElementById('resend-link');
-        const timerDisplay = document.getElementById('resend-timer');
-        link.style.display = 'none';
-        timerDisplay.style.display = 'inline';
-        const interval = setInterval(() => {
-            resendTimer--;
-            timerDisplay.innerText = `Wait ${resendTimer}s to resend`;
-            if (resendTimer <= 0) {
-                clearInterval(interval);
-                link.style.display = 'inline';
-                timerDisplay.style.display = 'none';
-            }
-        }, 1000);
-    }
-
-    function showTokenView() {
-        document.getElementById('login-fields').style.display = 'none';
-        document.getElementById('token-fields').style.display = 'block';
-        setTimeout(() => document.getElementById('auth-token').focus(), 100); 
-    }
-
-    async function forgotPassword() {
-        const email = document.getElementById('auth-email').value.trim();
-        if (!email) return alert("Enter email first.");
-        const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
-        if (error) alert(error.message);
-        else alert("Reset link sent!");
+        else location.reload();
     }
 
     window.onload = async () => {
