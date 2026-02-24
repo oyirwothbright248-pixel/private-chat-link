@@ -6,18 +6,18 @@ const { createClient } = require('@supabase/supabase-js');
 
 // 1. Connect to Supabase
 const SUPABASE_URL = 'https://bcdnzmnmaxopmsimdetn.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_C8ygL8VNGGJ2L2qqTP6g2g_hPYokDmy';
+const SUPABASE_KEY = 'sb_publishable_C8ygL8VNGGJ2L2qqTP6g2g_hPYokDmy'; // Note: Use Service Role Key for backend if available
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 app.use(express.static('public'));
 
-function generateShortId() {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
+// Helper to create a consistent room name between two users
+function getRoomId(id1, id2) {
+    return [id1, id2].sort().join('--');
 }
 
-app.get('/create', (req, res) => {
-    const roomId = generateShortId(); 
-    res.redirect(`/room/${roomId}`);
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/index.html');
 });
 
 app.get('/room/:id', (req, res) => {
@@ -26,57 +26,76 @@ app.get('/room/:id', (req, res) => {
 
 io.on('connection', (socket) => {
     
-    // 2. Load History when joining
-    socket.on('join-room', async (roomId) => {
-        socket.join(roomId);
-        console.log(`User ${socket.id} joined room: ${roomId}`);
+    // --- SESSION JOINING ---
+    socket.on('join-session', async (data) => {
+        const { myId, targetId } = data;
+        socket.join(myId); // Join personal room for notifications
+        
+        console.log(`User ${myId} is online`);
 
-        // Fetch last 50 messages for this specific room
-        const { data, error } = await supabase
-            .from('messages')
-            .select('*')
-            .eq('room_id', roomId)
-            .order('created_at', { ascending: true })
-            .limit(50);
+        if (targetId) {
+            const room = getRoomId(myId, targetId);
+            socket.join(room);
+            console.log(`${myId} joined conversation with ${targetId}`);
 
-        if (!error && data) {
-            // Send history only to the user who just joined
-            socket.emit('load-history', data);
+            // Fetch history for this specific duo
+            const { data: history, error } = await supabase
+                .from('messages')
+                .select('*')
+                .eq('room_id', room)
+                .order('created_at', { ascending: true })
+                .limit(100);
+
+            if (!error && history) {
+                socket.emit('load-history', history);
+            }
         }
     });
 
-    // 3. Save Message to Supabase
+    // --- MESSAGING (Text, Voice, File) ---
     socket.on('chat-msg', async (data) => {
-        // Broadcast immediately for speed
-        io.to(data.roomId).emit('render-msg', {
-            msg: data.msg,
-            sender: socket.id
-        });
-
-        // Save to Database in the background
+        const room = getRoomId(data.sender, data.target);
+        
+        // Save to Database
         const { error } = await supabase
             .from('messages')
             .insert([{ 
-                room_id: data.roomId, 
-                sender_id: socket.id, 
-                message: data.msg 
+                room_id: room, 
+                sender_id: data.sender, 
+                message: data.msg,
+                type: data.type || 'text',
+                file_url: data.file_url || null 
             }]);
         
-        if (error) console.error('Supabase Save Error:', error.message);
+        if (error) console.error("DB Save Error:", error.message);
+
+        // Send to the target user specifically (for notifications) 
+        // and to the room (for active chat)
+        socket.to(room).emit('render-msg', data);
+        socket.to(data.target).emit('render-msg', data); 
     });
 
+    // --- WEBRTC SIGNALING (Restored) ---
     socket.on('call-request', (payload) => {
-        socket.to(payload.roomId).emit('incoming-call', payload);
+        // Direct ring to the target user's personal ID room
+        socket.to(payload.target).emit('incoming-call', payload);
     });
 
     socket.on('signal', (payload) => {
-        socket.to(payload.roomId).emit('signal', payload.data);
+        // Direct signaling to the target user
+        socket.to(payload.target).emit('signal', payload.data);
+    });
+
+    // --- UTILITIES ---
+    socket.on('clear-history', async (data) => {
+        const room = getRoomId(data.myId, data.targetId);
+        await supabase.from('messages').delete().eq('room_id', room);
     });
 
     socket.on('disconnect', () => {
-        console.log('User disconnected');
+        console.log('User offline');
     });
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
+http.listen(PORT, '0.0.0.0', () => console.log(`BrightTech Server running on port ${PORT}`));
