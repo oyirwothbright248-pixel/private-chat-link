@@ -153,7 +153,9 @@
     const socket = io();
     const supabaseUrl = 'https://bcdnzmnmaxopmsimdetn.supabase.co';
     const supabaseKey = 'sb_publishable_C8ygL8VNGGJ2L2qqTP6g2g_hPYokDmy';
-    let supabase = libSupabase.createClient(supabaseUrl, supabaseKey);
+    
+    // FIX: Using the global 'supabase' object from the CDN and naming the client 'supabaseClient'
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
     let myId = null;
     let targetId = window.location.pathname.split('/').pop();
@@ -161,9 +163,11 @@
 
     let resendTimer = 0;
     let notifications = {};
+    let localStream, peerConnection;
 
     function toggleLoading(btnId, isLoading) {
         const btn = document.getElementById(btnId);
+        if (!btn) return;
         if (isLoading) btn.classList.add('loading');
         else btn.classList.remove('loading');
     }
@@ -174,13 +178,13 @@
         if (!email || !password) return alert("Please enter both email and password.");
 
         toggleLoading('login-btn', true);
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
         
         if (error) {
             alert("Login Error: " + error.message);
             toggleLoading('login-btn', false);
         } else {
-            const { error: otpError } = await supabase.auth.signInWithOtp({ email });
+            const { error: otpError } = await supabaseClient.auth.signInWithOtp({ email });
             toggleLoading('login-btn', false);
             if (otpError) alert("Security Gate Error: " + otpError.message);
             else {
@@ -196,7 +200,7 @@
         if (!email || !password) return alert("Please fill in all fields.");
 
         toggleLoading('signup-btn', true);
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { error } = await supabaseClient.auth.signUp({ email, password });
         toggleLoading('signup-btn', false);
         
         if (error) alert("Signup Error: " + error.message);
@@ -213,10 +217,10 @@
         if (!token) return alert("Please enter the token.");
 
         toggleLoading('verify-btn', true);
-        const { error } = await supabase.auth.verifyOtp({ email, token, type: 'signup' });
+        const { error } = await supabaseClient.auth.verifyOtp({ email, token, type: 'signup' });
 
         if (error) {
-            const { error: error2 } = await supabase.auth.verifyOtp({ email, token, type: 'signin' });
+            const { error: error2 } = await supabaseClient.auth.verifyOtp({ email, token, type: 'signin' });
             if(error2) {
                 alert("Invalid Token: Authentication Failed.");
                 toggleLoading('verify-btn', false);
@@ -227,7 +231,7 @@
     async function resendToken() {
         if (resendTimer > 0) return; 
         const email = document.getElementById('auth-email').value;
-        const { error } = await supabase.auth.signInWithOtp({ email });
+        const { error } = await supabaseClient.auth.signInWithOtp({ email });
         if (error) alert("Action blocked: " + error.message);
         else {
             alert("A fresh token has been dispatched.");
@@ -259,20 +263,17 @@
     }
 
     async function forgotPassword() {
-        const email = document.getElementById('auth-email').value;
+        const email = document.getElementById('auth-email').value.trim();
         if (!email) return alert("Enter email first.");
-        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
         if (error) alert(error.message);
         else alert("Reset link sent!");
     }
 
     window.onload = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await supabaseClient.auth.getSession();
         if (session) {
             myId = session.user.id;
-            supabase = libSupabase.createClient(supabaseUrl, supabaseKey, {
-                global: { headers: { 'x-user-id': myId } }
-            });
             document.getElementById('auth-screen').style.display = 'none';
             document.getElementById('main-app').style.display = 'flex';
             socket.emit('join-session', { myId, targetId });
@@ -280,7 +281,7 @@
         }
     };
 
-    async function logout() { await supabase.auth.signOut(); location.href = '/'; }
+    async function logout() { await supabaseClient.auth.signOut(); location.href = '/'; }
     
     // --- CHAT RENDER LOGIC ---
     socket.on('load-history', (history) => {
@@ -319,9 +320,9 @@
 
     async function uploadToSupabase(blob, name) {
         const fileName = `${Date.now()}_${name}`;
-        const { data, error } = await supabase.storage.from('chat-assets').upload(`uploads/${fileName}`, blob);
+        const { data, error } = await supabaseClient.storage.from('chat-assets').upload(`uploads/${fileName}`, blob);
         if (error) return null;
-        const { data: { publicUrl } } = supabase.storage.from('chat-assets').getPublicUrl(`uploads/${fileName}`);
+        const { data: { publicUrl } } = supabaseClient.storage.from('chat-assets').getPublicUrl(`uploads/${fileName}`);
         return publicUrl;
     }
 
@@ -350,12 +351,14 @@
     voiceBtn.onmousedown = startVoice; voiceBtn.onmouseup = stopVoice;
 
     async function startVoice() {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.start();
-        voiceBtn.classList.add('recording');
-        audioChunks = [];
-        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.start();
+            voiceBtn.classList.add('recording');
+            audioChunks = [];
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        } catch(e) { console.error("Mic access denied"); }
     }
 
     async function stopVoice() {
