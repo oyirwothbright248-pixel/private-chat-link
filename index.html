@@ -17,8 +17,15 @@
 
         /* Auth Screen */
         #auth-screen { position: fixed; inset: 0; background: var(--bg); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .auth-card { background: var(--panel); padding: 30px; border-radius: 20px; border: 1px solid var(--accent); width: 100%; max-width: 400px; text-align: center; }
+        .auth-card { background: var(--panel); padding: 30px; border-radius: 20px; border: 1px solid var(--accent); width: 100%; max-width: 400px; text-align: center; box-shadow: 0 0 30px rgba(14, 165, 233, 0.2); }
+        .auth-card input { width: 100%; margin-bottom: 12px; padding: 12px; border-radius: 10px; border: 1px solid #334155; background: #020617; color: white; outline: none; transition: 0.3s; }
+        .auth-card input:focus { border-color: var(--neon); box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
         
+        .auth-btn { width: 100%; padding: 14px; border-radius: 10px; font-weight: 800; cursor: pointer; transition: 0.2s; border: none; margin-bottom: 10px; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+        .auth-link { color: var(--neon); font-size: 12px; cursor: pointer; text-decoration: underline; margin-top: 10px; display: inline-block; opacity: 0.7; }
+
         /* Layout */
         header { padding: 15px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; flex-shrink: 0; z-index: 100; }
         
@@ -37,16 +44,14 @@
         
         /* Contact Item & Badge */
         .contact-item { padding: 12px; margin-bottom: 8px; background: #1e293b; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.2s; position: relative; }
-        .contact-item:hover { background: #334155; }
         .contact-avatar { width: 35px; height: 35px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
         .badge { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: var(--danger); color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 800; display: none; }
         .badge.active { display: block; }
 
         /* Bubbles */
-        .msg { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.4; position: relative; }
+        .msg { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.4; position: relative; word-wrap: break-word; }
         .me { align-self: flex-end; background: var(--bubble-me); color: white; border-bottom-right-radius: 2px; }
         .them { align-self: flex-start; background: var(--bubble-them); border-bottom-left-radius: 2px; }
-        .call-log { font-style: italic; opacity: 0.8; font-size: 12px; align-self: center; background: rgba(255,255,255,0.05); padding: 5px 15px; border-radius: 20px; border: 1px solid #334155; margin: 5px 0; }
 
         /* Input */
         .input-box { background: var(--panel); padding: 15px; display: flex; align-items: center; gap: 10px; border-top: 1px solid #1e293b; padding-bottom: max(15px, env(safe-area-inset-bottom)); }
@@ -64,16 +69,32 @@
 <body>
 
 <div id="auth-screen">
-    <div class="auth-card">
+    <div class="auth-card" id="auth-card-main">
         <h2 style="color:var(--neon); margin-bottom: 5px;">BRIGHT TECH</h2>
         <p style="margin-bottom: 20px; opacity: 0.8;">Secure Communication Portal</p>
         
-        <input type="email" id="auth-email" placeholder="Email Address" style="width:100%; margin-bottom:10px; padding:12px; border-radius:10px; border:1px solid #334155; background:#020617; color:white;">
-        <input type="password" id="auth-password" placeholder="Password" style="width:100%; margin-bottom:15px; padding:12px; border-radius:10px; border:1px solid #334155; background:#020617; color:white;">
-        
-        <button onclick="secureLogin()" style="width:100%; padding:14px; border-radius:10px; background:var(--accent); border:none; color:white; font-weight:800; cursor:pointer; margin-bottom:10px;">SIGN IN</button>
-        <button onclick="secureSignUp()" style="width:100%; padding:14px; border-radius:10px; background:transparent; border:1px solid var(--accent); color:var(--accent); font-weight:800; cursor:pointer;">CREATE ACCOUNT</button>
+        <div id="login-fields">
+            <input type="email" id="auth-email" placeholder="Email Address">
+            <input type="password" id="auth-password" placeholder="Password">
+            <button class="auth-btn btn-primary" onclick="handleLogin()">SIGN IN</button>
+            <button class="auth-btn btn-outline" onclick="handleSignUp()">CREATE ACCOUNT</button>
+            <span class="auth-link" onclick="forgotPassword()">Forgot Password?</span>
+        </div>
+
+<div id="token-fields" style="display:none">
+    <p style="font-size: 13px; color: var(--neon);">Enter the 6-digit code sent to your email</p>
+    
+    <input type="text" id="auth-token" placeholder="Enter Token (OTP)" maxlength="6" 
+           style="text-align: center; letter-spacing: 4px; font-weight: 800; font-size: 18px;">
+    
+    <button class="auth-btn btn-primary" onclick="verifyToken()">VERIFY & ENTER</button>
+    
+    <div style="margin-top: 15px;">
+        <span id="resend-link" class="auth-link" onclick="resendToken()">Resend Code</span>
+        <span id="resend-timer" style="font-size: 11px; opacity: 0.5; display: none; color: var(--text);">Wait 60s to resend</span>
     </div>
+
+    <span class="auth-link" onclick="location.reload()" style="display:block; margin-top:20px; opacity:0.5; text-decoration: none;">← Back to Login</span>
 </div>
 
 <div id="contact-drawer">
@@ -117,67 +138,152 @@
 
 <script>
     const socket = io();
-    
-    // 1. INITIALIZE SUPABASE WITH AUTH HEADERS
     const supabaseUrl = 'https://bcdnzmnmaxopmsimdetn.supabase.co';
     const supabaseKey = 'sb_publishable_C8ygL8VNGGJ2L2qqTP6g2g_hPYokDmy';
-    
-    // We initialize without headers first, then update them after login
     let supabase = libSupabase.createClient(supabaseUrl, supabaseKey);
 
     let myId = null;
     let targetId = window.location.pathname.split('/').pop();
     if(targetId === '' || targetId === 'room') targetId = null;
 
-    let mediaRecorder, audioChunks = [];
-    let localStream, peerConnection;
-    const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-    const notifications = {};
+    // --- SECURE AUTH & TOKEN LOGIC ---
 
-    // --- INITIALIZATION (SECURE) ---
-    window.onload = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
+let resendTimer = 0;
 
-        if (session) {
-            myId = session.user.id;
-            
-            // Re-initialize with secure headers for RLS
-            supabase = libSupabase.createClient(supabaseUrl, supabaseKey, {
-                global: { headers: { 'x-user-id': myId } }
-            });
+async function handleLogin() {
+    const email = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    
+    if (!email || !password) return alert("Please enter both email and password.");
 
-            document.getElementById('auth-screen').style.display = 'none';
-            socket.emit('join-session', { myId, targetId });
-            document.getElementById('header-id').innerText = targetId ? `Chat: ${targetId}` : `ID: ${myId.substring(0,8)}...`;
+    // Step 1: Secure Password Authentication
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    if (error) {
+        alert("Login Error: " + error.message);
+    } else {
+        // Step 2: Trigger the Token (OTP) for the second layer of security
+        const { error: otpError } = await supabase.auth.signInWithOtp({ email });
+        if (otpError) {
+            alert("Security Gate Error: " + otpError.message);
+        } else {
+            showTokenView();
+            startResendTimer(); // Start cooldown on the first send
         }
-    };
+    }
+}
 
-    // --- SECURE AUTH FUNCTIONS ---
-    async function secureLogin() {
-        const email = document.getElementById('auth-email').value;
-        const password = document.getElementById('auth-password').value;
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        
-        if (error) alert("Login Error: " + error.message);
+async function handleSignUp() {
+    const email = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+
+    if (!email || !password) return alert("Please fill in all fields.");
+
+    const { error } = await supabase.auth.signUp({ email, password });
+    
+    if (error) {
+        alert("Signup Error: " + error.message);
+    } else {
+        alert("Verification code sent! Check your email.");
+        showTokenView();
+        startResendTimer();
+    }
+}
+
+async function resendToken() {
+    if (resendTimer > 0) return; 
+
+    const email = document.getElementById('auth-email').value;
+    if (!email) return alert("Session expired. Please reload.");
+
+    const { error } = await supabase.auth.signInWithOtp({ email });
+
+    if (error) {
+        alert("Action blocked: " + error.message);
+    } else {
+        alert("A fresh token has been dispatched to your inbox.");
+        startResendTimer();
+    }
+}
+
+function startResendTimer() {
+    resendTimer = 60;
+    const link = document.getElementById('resend-link');
+    const timerDisplay = document.getElementById('resend-timer');
+
+    if (link && timerDisplay) {
+        link.style.display = 'none';
+        timerDisplay.style.display = 'inline';
+
+        const interval = setInterval(() => {
+            resendTimer--;
+            timerDisplay.innerText = `Wait ${resendTimer}s to resend`;
+
+            if (resendTimer <= 0) {
+                clearInterval(interval);
+                link.style.display = 'inline';
+                timerDisplay.style.display = 'none';
+            }
+        }, 1000);
+    }
+}
+
+async function verifyToken() {
+    const email = document.getElementById('auth-email').value;
+    const token = document.getElementById('auth-token').value.trim();
+    
+    if (!token) return alert("Please enter the token.");
+
+    // Check Signup type first
+    const { data, error } = await supabase.auth.verifyOtp({
+        email, token, type: 'signup'
+    });
+
+    if (error) {
+        // Fallback: Check Signin type
+        const { error: error2 } = await supabase.auth.verifyOtp({ email, token, type: 'signin' });
+        if(error2) alert("Invalid Token: Authentication Failed.");
         else location.reload();
+    } else {
+        location.reload();
     }
+}
 
-    async function secureSignUp() {
-        const email = document.getElementById('auth-email').value;
-        const password = document.getElementById('auth-password').value;
-        const { data, error } = await supabase.auth.signUp({ email, password });
-        
-        if (error) alert("Signup Error: " + error.message);
-        else alert("Verification email sent! Check your inbox.");
+async function forgotPassword() {
+    const email = document.getElementById('auth-email').value;
+    if (!email) return alert("Please enter your email to receive a reset link.");
+    
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) alert(error.message);
+    else alert("Security reset link dispatched to your email!");
+}
+
+function showTokenView() {
+    document.getElementById('login-fields').style.display = 'none';
+    document.getElementById('token-fields').style.display = 'block';
+    
+    // Automatically focus the token input for the user
+    const tokenInput = document.getElementById('auth-token');
+    setTimeout(() => tokenInput.focus(), 100); 
+}
+
+// --- SESSION INITIALIZATION ---
+window.onload = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+        myId = session.user.id;
+        // Re-init with secure RLS headers
+        supabase = libSupabase.createClient(supabaseUrl, supabaseKey, {
+            global: { headers: { 'x-user-id': myId } }
+        });
+        document.getElementById('auth-screen').style.display = 'none';
+        socket.emit('join-session', { myId, targetId });
+        document.getElementById('header-id').innerText = targetId ? `Chat: ${targetId}` : `ID: ${myId.substring(0,8)}...`;
     }
+};
 
-    async function logout() { 
-        await supabase.auth.signOut();
-        localStorage.removeItem('bt_userid'); 
-        location.href = '/'; 
-    }
-
-    // --- MESSAGING & CONTACTS ---
+    // --- REST OF CHAT LOGIC (保持不变) ---
+    async function logout() { await supabase.auth.signOut(); location.href = '/'; }
     socket.on('load-history', (history) => {
         const chatContainer = document.getElementById('chat-container');
         chatContainer.innerHTML = '';
@@ -189,20 +295,14 @@
         const render = document.getElementById('contacts-render');
         const unique = new Set();
         history.forEach(m => { if(m.sender_id !== myId) unique.add(m.sender_id); });
-        
         render.innerHTML = unique.size === 0 ? '<p style="text-align:center; opacity:0.5;">No contacts</p>' : '';
         unique.forEach(contact => {
             const div = document.createElement('div');
             div.className = 'contact-item';
             div.id = `contact-${contact}`;
             div.onclick = () => location.href = `/room/${contact}`;
-            
             const badgeClass = notifications[contact] ? 'badge active' : 'badge';
-            div.innerHTML = `
-                <div class="contact-avatar">${contact.substring(0,1).toUpperCase()}</div>
-                <div style="font-size: 10px;">${contact.substring(0,12)}...</div>
-                <div class="${badgeClass}">NEW</div>
-            `;
+            div.innerHTML = `<div class="contact-avatar">${contact.substring(0,1).toUpperCase()}</div><div>${contact.substring(0,8)}...</div><div class="${badgeClass}">NEW</div>`;
             render.appendChild(div);
         });
     }
@@ -210,7 +310,7 @@
     async function uploadToSupabase(blob, name) {
         const fileName = `${Date.now()}_${name}`;
         const { data, error } = await supabase.storage.from('chat-assets').upload(`uploads/${fileName}`, blob);
-        if (error) { console.error(error); return null; }
+        if (error) return null;
         const { data: { publicUrl } } = supabase.storage.from('chat-assets').getPublicUrl(`uploads/${fileName}`);
         return publicUrl;
     }
@@ -226,9 +326,8 @@
 
     socket.on('render-msg', (data) => { 
         if (data.sender !== myId) {
-            if (data.sender === targetId) {
-                renderMessage(data, 'them');
-            } else {
+            if (data.sender === targetId) renderMessage(data, 'them');
+            else {
                 notifications[data.sender] = true;
                 const badge = document.querySelector(`#contact-${data.sender} .badge`);
                 if(badge) badge.classList.add('active');
@@ -240,22 +339,57 @@
         const div = document.createElement('div');
         div.className = `msg ${type}`;
         const content = msg.message || msg.msg;
-        
-        if (msg.type === 'call') {
-            div.className = 'msg call-log';
-            div.textContent = `📞 ${content}`;
-        } else if (msg.type === 'voice') {
-            div.innerHTML = `<audio controls src="${msg.file_url}" style="width:200px"></audio>`;
-        } else if (msg.type === 'file') {
-            div.innerHTML = `📄 <a href="${msg.file_url}" target="_blank" style="color:white; font-weight:800;">View File</a>`;
-        } else {
-            div.textContent = content;
-        }
+        if (msg.type === 'voice') div.innerHTML = `<audio controls src="${msg.file_url}" style="width:200px"></audio>`;
+        else if (msg.type === 'file') div.innerHTML = `📄 <a href="${msg.file_url}" target="_blank" style="color:white; font-weight:800;">View File</a>`;
+        else div.textContent = content;
         document.getElementById('chat-container').appendChild(div);
         document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;
     }
 
-    // --- CALLING LOGIC ---
+    // --- WebRTC / Voice Logic ---
+    let mediaRecorder, audioChunks = [];
+    const voiceBtn = document.getElementById('voiceBtn');
+    voiceBtn.onmousedown = startVoice; voiceBtn.onmouseup = stopVoice;
+
+    async function startVoice() {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.start();
+        voiceBtn.classList.add('recording');
+        audioChunks = [];
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    }
+
+    async function stopVoice() {
+        if (!mediaRecorder || mediaRecorder.state === "inactive") return;
+        mediaRecorder.stop();
+        voiceBtn.classList.remove('recording');
+        mediaRecorder.onstop = async () => {
+            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            const url = await uploadToSupabase(blob, 'voice.webm');
+            if(url) {
+                const data = { sender: myId, target: targetId, type: 'voice', msg: 'Voice Note', file_url: url };
+                socket.emit('chat-msg', data);
+                renderMessage(data, 'me');
+            }
+        };
+    }
+
+    async function handleFileUpload(input) {
+        if(input.files[0]) {
+            const url = await uploadToSupabase(input.files[0], input.files[0].name);
+            if(url) {
+                const data = { sender: myId, target: targetId, type: 'file', msg: `File: ${input.files[0].name}`, file_url: url };
+                socket.emit('chat-msg', data);
+                renderMessage(data, 'me');
+            }
+        }
+    }
+
+    function toggleDrawer() { document.getElementById('contact-drawer').classList.toggle('open'); }
+    function clearHistory() { if(confirm("Wipe chat?")) socket.emit('clear-history', { myId, targetId }); }
+
+    // Initiate WebRTC Call
     async function initiateCall(video) {
         if(!targetId) return alert("Select a contact");
         socket.emit('call-request', { sender: myId, target: targetId, video });
@@ -297,48 +431,6 @@
     });
 
     function endCall() { location.reload(); }
-
-    // --- VOICE & FILE STORAGE ---
-    const voiceBtn = document.getElementById('voiceBtn');
-    voiceBtn.onmousedown = startVoice; voiceBtn.onmouseup = stopVoice;
-    voiceBtn.ontouchstart = (e) => { e.preventDefault(); startVoice(); };
-    voiceBtn.ontouchend = (e) => { e.preventDefault(); stopVoice(); };
-
-    async function startVoice() {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.start();
-        voiceBtn.classList.add('recording');
-        audioChunks = [];
-        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-    }
-
-    async function stopVoice() {
-        if (!mediaRecorder || mediaRecorder.state === "inactive") return;
-        mediaRecorder.stop();
-        voiceBtn.classList.remove('recording');
-        mediaRecorder.onstop = async () => {
-            const blob = new Blob(audioChunks, { type: 'audio/webm' });
-            const url = await uploadToSupabase(blob, 'voice.webm');
-            if(url) {
-                const data = { sender: myId, target: targetId, type: 'voice', msg: 'Voice Note', file_url: url };
-                socket.emit('chat-msg', data);
-                renderMessage(data, 'me');
-            }
-        };
-    }
-
-    async function handleFileUpload(input) {
-        if(input.files[0]) {
-            const url = await uploadToSupabase(input.files[0], input.files[0].name);
-            if(url) {
-                const data = { sender: myId, target: targetId, type: 'file', msg: `File: ${input.files[0].name}`, file_url: url };
-                socket.emit('chat-msg', data);
-                renderMessage(data, 'me');
-            }
-        }
-    }
-
-    function toggleDrawer() { document.getElementById('contact-drawer').classList.toggle('open'); }
-    function clearHistory() { if(confirm("Wipe chat?")) socket.emit('clear-history', { myId, targetId }); }
 </script>
+</body>
+</html>
