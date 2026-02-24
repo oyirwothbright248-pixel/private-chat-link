@@ -21,12 +21,19 @@
         .auth-card input { width: 100%; margin-bottom: 12px; padding: 12px; border-radius: 10px; border: 1px solid #334155; background: #020617; color: white; outline: none; transition: 0.3s; }
         .auth-card input:focus { border-color: var(--neon); box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
         
-        .auth-btn { width: 100%; padding: 14px; border-radius: 10px; font-weight: 800; cursor: pointer; transition: 0.2s; border: none; margin-bottom: 10px; }
+        .auth-btn { width: 100%; padding: 14px; border-radius: 10px; font-weight: 800; cursor: pointer; transition: 0.2s; border: none; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .btn-primary { background: var(--accent); color: white; }
         .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
         .auth-link { color: var(--neon); font-size: 12px; cursor: pointer; text-decoration: underline; margin-top: 10px; display: inline-block; opacity: 0.7; }
 
-        /* Layout */
+        /* Spinner Style */
+        .spinner { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading .spinner { display: block; }
+        .loading .btn-text { display: none; }
+
+        /* Layout (Hidden by default) */
+        #main-app { display: none; flex-direction: column; height: 100vh; width: 100%; }
         header { padding: 15px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; flex-shrink: 0; z-index: 100; }
         
         /* Video Grid */
@@ -42,18 +49,15 @@
         .drawer-header { padding: 20px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
         #contacts-render { flex: 1; overflow-y: auto; padding: 10px; }
         
-        /* Contact Item & Badge */
         .contact-item { padding: 12px; margin-bottom: 8px; background: #1e293b; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.2s; position: relative; }
         .contact-avatar { width: 35px; height: 35px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
         .badge { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: var(--danger); color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 800; display: none; }
         .badge.active { display: block; }
 
-        /* Bubbles */
         .msg { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.4; position: relative; word-wrap: break-word; }
         .me { align-self: flex-end; background: var(--bubble-me); color: white; border-bottom-right-radius: 2px; }
         .them { align-self: flex-start; background: var(--bubble-them); border-bottom-left-radius: 2px; }
 
-        /* Input */
         .input-box { background: var(--panel); padding: 15px; display: flex; align-items: center; gap: 10px; border-top: 1px solid #1e293b; padding-bottom: max(15px, env(safe-area-inset-bottom)); }
         input[type="text"] { flex: 1; background: #020617; border: 1px solid #334155; padding: 12px 20px; border-radius: 25px; color: white; outline: none; }
         .btn-circle { width: 45px; height: 45px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
@@ -76,64 +80,73 @@
         <div id="login-fields">
             <input type="email" id="auth-email" placeholder="Email Address">
             <input type="password" id="auth-password" placeholder="Password">
-            <button class="auth-btn btn-primary" onclick="handleLogin()">SIGN IN</button>
-            <button class="auth-btn btn-outline" onclick="handleSignUp()">CREATE ACCOUNT</button>
+            <button id="login-btn" class="auth-btn btn-primary" onclick="handleLogin()">
+                <span class="btn-text">SIGN IN</span>
+                <div class="spinner"></div>
+            </button>
+            <button id="signup-btn" class="auth-btn btn-outline" onclick="handleSignUp()">
+                <span class="btn-text">CREATE ACCOUNT</span>
+                <div class="spinner"></div>
+            </button>
             <span class="auth-link" onclick="forgotPassword()">Forgot Password?</span>
         </div>
 
-<div id="token-fields" style="display:none">
-    <p style="font-size: 13px; color: var(--neon);">Enter the 6-digit code sent to your email</p>
-    
-    <input type="text" id="auth-token" placeholder="Enter Token (OTP)" maxlength="6" 
-           style="text-align: center; letter-spacing: 4px; font-weight: 800; font-size: 18px;">
-    
-    <button class="auth-btn btn-primary" onclick="verifyToken()">VERIFY & ENTER</button>
-    
-    <div style="margin-top: 15px;">
-        <span id="resend-link" class="auth-link" onclick="resendToken()">Resend Code</span>
-        <span id="resend-timer" style="font-size: 11px; opacity: 0.5; display: none; color: var(--text);">Wait 60s to resend</span>
-    </div>
-
-    <span class="auth-link" onclick="location.reload()" style="display:block; margin-top:20px; opacity:0.5; text-decoration: none;">← Back to Login</span>
-</div>
-
-<div id="contact-drawer">
-    <div class="drawer-header">
-        <h3 style="margin:0">Contacts</h3>
-        <button onclick="toggleDrawer()" style="background:none; border:none; color:white; font-size:20px;">✕</button>
-    </div>
-    <div id="contacts-render"></div>
-    <div style="padding: 20px; border-top: 1px solid #1e293b;">
-        <button onclick="clearHistory()" style="width:100%; color:var(--danger); background:rgba(239, 68, 68, 0.1); border:1px solid var(--danger); padding:10px; border-radius:8px; cursor:pointer;">🗑️ Wipe Chat History</button>
-        <button onclick="logout()" style="width:100%; color:white; background:none; border:none; margin-top:10px; opacity:0.5; font-size:12px; cursor:pointer;">Logout Session</button>
+        <div id="token-fields" style="display:none">
+            <p style="font-size: 13px; color: var(--neon);">Enter the 6-digit code sent to your email</p>
+            <input type="text" id="auth-token" placeholder="Enter Token (OTP)" maxlength="6" 
+                   style="text-align: center; letter-spacing: 4px; font-weight: 800; font-size: 18px;">
+            <button id="verify-btn" class="auth-btn btn-primary" onclick="verifyToken()">
+                <span class="btn-text">VERIFY & ENTER</span>
+                <div class="spinner"></div>
+            </button>
+            <div style="margin-top: 15px;">
+                <span id="resend-link" class="auth-link" onclick="resendToken()">Resend Code</span>
+                <span id="resend-timer" style="font-size: 11px; opacity: 0.5; display: none; color: var(--text);">Wait 60s to resend</span>
+            </div>
+            <span class="auth-link" onclick="location.reload()" style="display:block; margin-top:20px; opacity:0.5; text-decoration: none;">← Back to Login</span>
+        </div>
     </div>
 </div>
-<div class="overlay-bg" onclick="toggleDrawer()"></div>
 
-<header>
-    <button onclick="toggleDrawer()" style="background:none; border:none; font-size:24px; color:white; cursor:pointer;">☰</button>
-    <div id="header-id" style="font-weight:600; font-size:14px; color:var(--neon);">Connecting...</div>
-    <div style="display:flex; gap:12px;">
-        <button onclick="initiateCall(false)" style="background:none; border:none; font-size:20px; cursor:pointer;">📞</button>
-        <button onclick="initiateCall(true)" style="background:none; border:none; font-size:20px; cursor:pointer;">📹</button>
-        <button id="hangupBtn" onclick="endCall()" style="display:none; background:var(--danger); border:none; border-radius:50%; width:30px; height:30px; color:white; cursor:pointer;">✕</button>
+<div id="main-app">
+    <div id="contact-drawer">
+        <div class="drawer-header">
+            <h3 style="margin:0">Contacts</h3>
+            <button onclick="toggleDrawer()" style="background:none; border:none; color:white; font-size:20px;">✕</button>
+        </div>
+        <div id="contacts-render"></div>
+        <div style="padding: 20px; border-top: 1px solid #1e293b;">
+            <button onclick="clearHistory()" style="width:100%; color:var(--danger); background:rgba(239, 68, 68, 0.1); border:1px solid var(--danger); padding:10px; border-radius:8px; cursor:pointer;">🗑️ Wipe Chat History</button>
+            <button onclick="logout()" style="width:100%; color:white; background:none; border:none; margin-top:10px; opacity:0.5; font-size:12px; cursor:pointer;">Logout Session</button>
+        </div>
     </div>
-</header>
+    <div class="overlay-bg" onclick="toggleDrawer()"></div>
 
-<div id="video-grid">
-    <video id="localVideo" autoplay muted playsinline></video>
-    <video id="remoteVideo" autoplay playsinline></video>
-</div>
+    <header>
+        <button onclick="toggleDrawer()" style="background:none; border:none; font-size:24px; color:white; cursor:pointer;">☰</button>
+        <div id="header-id" style="font-weight:600; font-size:14px; color:var(--neon);">Connecting...</div>
+        <div style="display:flex; gap:12px;">
+            <button onclick="initiateCall(false)" style="background:none; border:none; font-size:20px; cursor:pointer;">📞</button>
+            <button onclick="initiateCall(true)" style="background:none; border:none; font-size:20px; cursor:pointer;">📹</button>
+            <button id="hangupBtn" onclick="endCall()" style="display:none; background:var(--danger); border:none; border-radius:50%; width:30px; height:30px; color:white; cursor:pointer;">✕</button>
+        </div>
+    </header>
 
-<div id="chat-container"></div>
+    <div id="video-grid">
+        <video id="localVideo" autoplay muted playsinline></video>
+        <video id="remoteVideo" autoplay playsinline></video>
+    </div>
 
-<div class="input-box">
-    <label class="btn-circle" style="background:#1e293b; color:var(--neon);">
-        📎<input type="file" id="file-input" style="display:none" onchange="handleFileUpload(this)">
-    </label>
-    <input type="text" id="msgInput" placeholder="Write a message...">
-    <button id="voiceBtn" class="btn-circle btn-voice">🎤</button>
-    <button class="btn-circle btn-send" onclick="send()">➔</button>
+    <div id="chat-container"></div>
+
+    <div class="input-box">
+        <label class="btn-circle" style="background:#1e293b; color:var(--neon);">
+            📎<input type="file" id="file-input" style="display:none" onchange="handleFileUpload(this)">
+        </label>
+        <input type="text" id="msgInput" placeholder="Write a message...">
+        <button id="voiceBtn" class="btn-circle btn-voice">🎤</button>
+        <button class="btn-circle btn-send" onclick="send()">➔</button>
+    </div>
 </div>
 
 <script>
@@ -146,79 +159,91 @@
     let targetId = window.location.pathname.split('/').pop();
     if(targetId === '' || targetId === 'room') targetId = null;
 
-    // --- SECURE AUTH & TOKEN LOGIC ---
+    let resendTimer = 0;
+    let notifications = {};
 
-let resendTimer = 0;
+    function toggleLoading(btnId, isLoading) {
+        const btn = document.getElementById(btnId);
+        if (isLoading) btn.classList.add('loading');
+        else btn.classList.remove('loading');
+    }
 
-async function handleLogin() {
-    const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value;
-    
-    if (!email || !password) return alert("Please enter both email and password.");
+    async function handleLogin() {
+        const email = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-password').value;
+        if (!email || !password) return alert("Please enter both email and password.");
 
-    // Step 1: Secure Password Authentication
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    
-    if (error) {
-        alert("Login Error: " + error.message);
-    } else {
-        // Step 2: Trigger the Token (OTP) for the second layer of security
-        const { error: otpError } = await supabase.auth.signInWithOtp({ email });
-        if (otpError) {
-            alert("Security Gate Error: " + otpError.message);
+        toggleLoading('login-btn', true);
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        
+        if (error) {
+            alert("Login Error: " + error.message);
+            toggleLoading('login-btn', false);
         } else {
-            showTokenView();
-            startResendTimer(); // Start cooldown on the first send
+            const { error: otpError } = await supabase.auth.signInWithOtp({ email });
+            toggleLoading('login-btn', false);
+            if (otpError) alert("Security Gate Error: " + otpError.message);
+            else {
+                showTokenView();
+                startResendTimer();
+            }
         }
     }
-}
 
-async function handleSignUp() {
-    const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value;
+    async function handleSignUp() {
+        const email = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-password').value;
+        if (!email || !password) return alert("Please fill in all fields.");
 
-    if (!email || !password) return alert("Please fill in all fields.");
-
-    const { error } = await supabase.auth.signUp({ email, password });
-    
-    if (error) {
-        alert("Signup Error: " + error.message);
-    } else {
-        alert("Verification code sent! Check your email.");
-        showTokenView();
-        startResendTimer();
+        toggleLoading('signup-btn', true);
+        const { error } = await supabase.auth.signUp({ email, password });
+        toggleLoading('signup-btn', false);
+        
+        if (error) alert("Signup Error: " + error.message);
+        else {
+            alert("Verification code sent! Check your email.");
+            showTokenView();
+            startResendTimer();
+        }
     }
-}
 
-async function resendToken() {
-    if (resendTimer > 0) return; 
+    async function verifyToken() {
+        const email = document.getElementById('auth-email').value;
+        const token = document.getElementById('auth-token').value.trim();
+        if (!token) return alert("Please enter the token.");
 
-    const email = document.getElementById('auth-email').value;
-    if (!email) return alert("Session expired. Please reload.");
+        toggleLoading('verify-btn', true);
+        const { error } = await supabase.auth.verifyOtp({ email, token, type: 'signup' });
 
-    const { error } = await supabase.auth.signInWithOtp({ email });
-
-    if (error) {
-        alert("Action blocked: " + error.message);
-    } else {
-        alert("A fresh token has been dispatched to your inbox.");
-        startResendTimer();
+        if (error) {
+            const { error: error2 } = await supabase.auth.verifyOtp({ email, token, type: 'signin' });
+            if(error2) {
+                alert("Invalid Token: Authentication Failed.");
+                toggleLoading('verify-btn', false);
+            } else location.reload();
+        } else location.reload();
     }
-}
 
-function startResendTimer() {
-    resendTimer = 60;
-    const link = document.getElementById('resend-link');
-    const timerDisplay = document.getElementById('resend-timer');
+    async function resendToken() {
+        if (resendTimer > 0) return; 
+        const email = document.getElementById('auth-email').value;
+        const { error } = await supabase.auth.signInWithOtp({ email });
+        if (error) alert("Action blocked: " + error.message);
+        else {
+            alert("A fresh token has been dispatched.");
+            startResendTimer();
+        }
+    }
 
-    if (link && timerDisplay) {
+    function startResendTimer() {
+        resendTimer = 60;
+        const link = document.getElementById('resend-link');
+        const timerDisplay = document.getElementById('resend-timer');
         link.style.display = 'none';
         timerDisplay.style.display = 'inline';
-
         const interval = setInterval(() => {
             resendTimer--;
             timerDisplay.innerText = `Wait ${resendTimer}s to resend`;
-
             if (resendTimer <= 0) {
                 clearInterval(interval);
                 link.style.display = 'inline';
@@ -226,70 +251,55 @@ function startResendTimer() {
             }
         }, 1000);
     }
-}
 
-async function verifyToken() {
-    const email = document.getElementById('auth-email').value;
-    const token = document.getElementById('auth-token').value.trim();
-    
-    if (!token) return alert("Please enter the token.");
-
-    // Check Signup type first
-    const { data, error } = await supabase.auth.verifyOtp({
-        email, token, type: 'signup'
-    });
-
-    if (error) {
-        // Fallback: Check Signin type
-        const { error: error2 } = await supabase.auth.verifyOtp({ email, token, type: 'signin' });
-        if(error2) alert("Invalid Token: Authentication Failed.");
-        else location.reload();
-    } else {
-        location.reload();
+    function showTokenView() {
+        document.getElementById('login-fields').style.display = 'none';
+        document.getElementById('token-fields').style.display = 'block';
+        setTimeout(() => document.getElementById('auth-token').focus(), 100); 
     }
-}
 
-async function forgotPassword() {
-    const email = document.getElementById('auth-email').value;
-    if (!email) return alert("Please enter your email to receive a reset link.");
-    
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
-    if (error) alert(error.message);
-    else alert("Security reset link dispatched to your email!");
-}
-
-function showTokenView() {
-    document.getElementById('login-fields').style.display = 'none';
-    document.getElementById('token-fields').style.display = 'block';
-    
-    // Automatically focus the token input for the user
-    const tokenInput = document.getElementById('auth-token');
-    setTimeout(() => tokenInput.focus(), 100); 
-}
-
-// --- SESSION INITIALIZATION ---
-window.onload = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-        myId = session.user.id;
-        // Re-init with secure RLS headers
-        supabase = libSupabase.createClient(supabaseUrl, supabaseKey, {
-            global: { headers: { 'x-user-id': myId } }
-        });
-        document.getElementById('auth-screen').style.display = 'none';
-        socket.emit('join-session', { myId, targetId });
-        document.getElementById('header-id').innerText = targetId ? `Chat: ${targetId}` : `ID: ${myId.substring(0,8)}...`;
+    async function forgotPassword() {
+        const email = document.getElementById('auth-email').value;
+        if (!email) return alert("Enter email first.");
+        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        if (error) alert(error.message);
+        else alert("Reset link sent!");
     }
-};
 
-    // --- REST OF CHAT LOGIC (保持不变) ---
+    window.onload = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            myId = session.user.id;
+            supabase = libSupabase.createClient(supabaseUrl, supabaseKey, {
+                global: { headers: { 'x-user-id': myId } }
+            });
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'flex';
+            socket.emit('join-session', { myId, targetId });
+            document.getElementById('header-id').innerText = targetId ? `Chat: ${targetId}` : `ID: ${myId.substring(0,8)}...`;
+        }
+    };
+
     async function logout() { await supabase.auth.signOut(); location.href = '/'; }
+    
+    // --- CHAT RENDER LOGIC ---
     socket.on('load-history', (history) => {
         const chatContainer = document.getElementById('chat-container');
         chatContainer.innerHTML = '';
         history.forEach(m => renderMessage(m, m.sender_id === myId ? 'me' : 'them'));
         updateContactList(history);
     });
+
+    function renderMessage(msg, type) {
+        const div = document.createElement('div');
+        div.className = `msg ${type}`;
+        const content = msg.message || msg.msg;
+        if (msg.type === 'voice') div.innerHTML = `<audio controls src="${msg.file_url}" style="width:200px"></audio>`;
+        else if (msg.type === 'file') div.innerHTML = `📄 <a href="${msg.file_url}" target="_blank" style="color:white; font-weight:800;">View File</a>`;
+        else div.textContent = content;
+        document.getElementById('chat-container').appendChild(div);
+        document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;
+    }
 
     function updateContactList(history) {
         const render = document.getElementById('contacts-render');
@@ -335,18 +345,6 @@ window.onload = async () => {
         }
     });
 
-    function renderMessage(msg, type) {
-        const div = document.createElement('div');
-        div.className = `msg ${type}`;
-        const content = msg.message || msg.msg;
-        if (msg.type === 'voice') div.innerHTML = `<audio controls src="${msg.file_url}" style="width:200px"></audio>`;
-        else if (msg.type === 'file') div.innerHTML = `📄 <a href="${msg.file_url}" target="_blank" style="color:white; font-weight:800;">View File</a>`;
-        else div.textContent = content;
-        document.getElementById('chat-container').appendChild(div);
-        document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;
-    }
-
-    // --- WebRTC / Voice Logic ---
     let mediaRecorder, audioChunks = [];
     const voiceBtn = document.getElementById('voiceBtn');
     voiceBtn.onmousedown = startVoice; voiceBtn.onmouseup = stopVoice;
@@ -389,7 +387,6 @@ window.onload = async () => {
     function toggleDrawer() { document.getElementById('contact-drawer').classList.toggle('open'); }
     function clearHistory() { if(confirm("Wipe chat?")) socket.emit('clear-history', { myId, targetId }); }
 
-    // Initiate WebRTC Call
     async function initiateCall(video) {
         if(!targetId) return alert("Select a contact");
         socket.emit('call-request', { sender: myId, target: targetId, video });
@@ -405,7 +402,7 @@ window.onload = async () => {
         document.getElementById('hangupBtn').style.display = 'block';
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: videoEnabled });
         document.getElementById('localVideo').srcObject = localStream;
-        peerConnection = new RTCPeerConnection(rtcConfig);
+        peerConnection = new RTCPeerConnection();
         localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
         peerConnection.ontrack = e => {
             document.getElementById('remoteVideo').srcObject = e.streams[0];
